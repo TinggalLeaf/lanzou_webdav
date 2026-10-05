@@ -7,8 +7,8 @@
 # =============================================================================
 
 # ----------- 阶段 1：构建 -----------
-# Rust 1.86+ 才支持 edition2024（idna_adapter 等新 crate 依赖）
-FROM rust:1.86-alpine AS builder
+# Rust 1.88+ 支持 edition2024 与最新 chrono / time / encoding_rs 等依赖
+FROM rust:1.88-alpine AS builder
 
 # musl + 静态链接所需工具链
 RUN apk add --no-cache musl-dev pkgconfig openssl-dev
