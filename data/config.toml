@@ -1,0 +1,20 @@
+# Lanzou WebDAV 配置文件
+# 路径：./data/config.toml（或通过 LANZOU_DATA_DIR 环境变量指定）
+#
+# ⚠️ 首次启动前请填入你的蓝奏云账号与密码！
+# 登录成功后，password 字段会被自动清空，会话改为写入 data/account.json。
+
+# HTTP 监听端口（默认 8080）
+listen_port = 8080
+
+[webdav]
+# WebDAV Basic Auth 凭证（客户端连接 WebDAV 时填写）
+username = "admin"
+password = "admin"
+
+[lanzou]
+# 蓝奏云账号（手机号或用户名）
+username = "YOUR_PHONE_OR_USERNAME"
+
+# 蓝奏云密码（登录成功后将自动清空）
+password = "YOUR_PASSWORD"

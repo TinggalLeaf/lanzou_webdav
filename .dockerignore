@@ -1,0 +1,10 @@
+# 排除无关文件，减小构建上下文
+.git
+.gitignore
+target
+Dockerfile
+.dockerignore
+README.md
+data
+*.log
+*.tmp

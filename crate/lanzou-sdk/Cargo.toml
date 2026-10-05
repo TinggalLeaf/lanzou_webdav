@@ -1,0 +1,46 @@
+[package]
+name = "lanzou-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "蓝奏云 (Lanzou Cloud) 非官方 Rust SDK，封装登录、文件管理、上传下载、直链解析等能力"
+license = "MIT"
+
+[lib]
+name = "lanzou_sdk"
+path = "src/lib.rs"
+
+[dependencies]
+# HTTP 客户端：使用 rustls 避免 OpenSSL 依赖，便于最小化 Docker 镜像
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "cookies", "json", "multipart", "gzip", "brotli", "deflate", "stream"] }
+# 异步运行时
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"] }
+# 序列化
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# 文件类型嗅探
+mime_guess = "2"
+# 哈希
+md5 = "0.7"
+# ChaCha20-Poly1305 加密用于分片文件名混淆
+chacha20poly1305 = "0.10"
+# Base64 / 十六进制
+base64 = "0.21"
+hex = "0.4"
+url = "2"
+# 正则
+regex = "1.10"
+# 异步字节流工具
+async-stream = "0.3"
+futures = "0.3"
+bytes = "1"
+# 时间戳
+chrono = "0.4"
+# 随机数
+rand = "0.8"
+# 错误处理
+thiserror = "1"
+# 日志
+log = "0.4"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }

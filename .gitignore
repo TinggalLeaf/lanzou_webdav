@@ -1,0 +1,21 @@
+# 编译产物
+/target
+**/*.rs.bk
+
+# === 敏感信息（必须忽略） ===
+# 蓝奏云会话 Cookie（泄露 = 账号失陷）
+/data/account.json
+# 本地 VFS 状态（包含蓝奏云文件夹 ID）
+/data/vfs_tree.tsv
+# 注意：data/config.toml 是占位模板，应入版本库
+
+# 用户私有的运行时配置（如果复制并填写了真号）
+config.local.toml
+
+# IDE / 系统
+.idea/
+.vscode/
+*.iml
+.DS_Store
+*.log
+*.tmp
