@@ -43,8 +43,9 @@ pub mod uploader;
 pub mod vfs;
 
 // 重新导出最常用的类型，方便上层使用
-pub use client::LanzouCloud;
+pub use client::{LanzouCloud, CHUNK_LIMIT};
 pub use downloader::LanzouDownloader;
 pub use error::{LanzouError, Result};
 pub use model::{AccountCredential, LanzouFile, LanzouFolder, NodeType, Session, ShareInfo, SharePayload};
+pub use uploader::{ProgressCb, UploadResult, Uploader};
 pub use vfs::{VfsNode, VfsTree};
