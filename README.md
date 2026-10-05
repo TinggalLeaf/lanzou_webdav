@@ -3,6 +3,9 @@
 把蓝奏云（[Lanzou Cloud / woozooo](https://up.woozooo.com)）挂载为标准 WebDAV，
 让 Infuse、极影视、RaiDrive、Kodi、VLC 等客户端可以直接读取、写入蓝奏云上的文件。
 
+> 作者：[@TinggalLeaf](https://github.com/TinggalLeaf)
+> 仓库：<https://github.com/TinggalLeaf/lanzou_webdav>
+
 ## 特性
 
 - ✅ 纯 Rust 实现，**无需** Node.js / 浏览器，自动绕过阿里 WAF `acw_sc__v2`
@@ -13,6 +16,7 @@
 - ✅ 目录结构 VFS 抽象，支持无限嵌套
 - ✅ Docker 一行启动；账号持久化到 `data/account.json`
 - ✅ 配置可通过 `data/config.toml` 持久化
+- ✅ 多阶段 Dockerfile，最终镜像约 **18 MB**（Alpine + 静态二进制）
 
 ## 快速开始
 
@@ -23,7 +27,7 @@ docker run -d --name lanzou-webdav \
   -p 8080:8080 \
   -v $(pwd)/data:/data \
   -e RUST_LOG=info \
-  ghcr.io/maple/lanzou-webdav:latest
+  ghcr.io/tinggalleaf/lanzou-webdav:latest
 ```
 
 挂载的 `data/` 目录会保存：
@@ -34,6 +38,8 @@ docker run -d --name lanzou-webdav \
 ### 从源码构建并运行
 
 ```bash
+git clone https://github.com/TinggalLeaf/lanzou_webdav.git
+cd lanzou_webdav
 cargo build --release
 mkdir -p ./data
 # 编辑 ./data/config.toml，填入蓝奏云账号密码
@@ -68,7 +74,7 @@ password = "YOUR_PASSWORD"   # 登录成功后会自动清空
 
 ```toml
 [dependencies]
-lanzou-sdk = { git = "https://github.com/MapleLeaf/lanzou-webdav", subdirectory = "crate/lanzou-sdk" }
+lanzou-sdk = { git = "https://github.com/TinggalLeaf/lanzou_webdav", subdirectory = "crate/lanzou-sdk" }
 ```
 
 ## 目录结构
@@ -76,7 +82,9 @@ lanzou-sdk = { git = "https://github.com/MapleLeaf/lanzou-webdav", subdirectory 
 ```
 lanzou_webdav/
 ├── Cargo.toml                  # workspace 根 + binary
-├── Dockerfile                  # 多阶段构建（Alpine ~ 30 MB 镜像）
+├── Dockerfile                  # 多阶段构建（Alpine ~ 18 MB 镜像）
+├── README.md
+├── SECURITY.md                 # 敏感信息处理说明
 ├── crate/
 │   └── lanzou-sdk/             # 蓝奏云 SDK
 │       ├── Cargo.toml
@@ -96,10 +104,17 @@ lanzou_webdav/
 │   ├── state.rs
 │   └── webdav.rs
 └── data/                       # 运行时持久化（Docker volume）
-    ├── config.toml
-    ├── account.json
-    └── vfs_tree.tsv
+    ├── config.toml             # 占位模板（已入库）
+    ├── account.json            # 真实账号（git 忽略）
+    └── vfs_tree.tsv            # VFS 状态（git 忽略）
 ```
+
+## 安全
+
+请阅读 [SECURITY.md](./SECURITY.md)：
+- 仓库中**不会**包含任何真实账号密码
+- `data/config.toml` 是占位模板，请自行修改后启动
+- 蓝奏云会话 Cookie 会自动写入 `data/account.json`，该文件已被 `.gitignore` 忽略
 
 ## License
 
