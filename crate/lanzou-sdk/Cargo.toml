@@ -1,6 +1,6 @@
 [package]
 name = "lanzou-sdk"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "蓝奏云 (Lanzou Cloud) 非官方 Rust SDK，封装登录、文件管理、上传下载、直链解析等能力"
 license = "MIT"

@@ -4,7 +4,7 @@ members = [".", "crate/lanzou-sdk"]
 
 [package]
 name = "lanzou_webdav"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "把蓝奏云挂载为 WebDAV 的轻量 Docker 服务"
 
