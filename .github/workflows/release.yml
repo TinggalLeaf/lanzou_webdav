@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write       # release-please 创建 Release / 上传资产
+  pull-requests: write  # release-please 开 Release PR
+  packages: write       # 推送 ghcr.io 镜像
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ------------------------------------------------------------------
+  # 1. release-please：维护 Release PR；合并 PR 后自动创建 GitHub Release
+  # ------------------------------------------------------------------
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: rust
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ------------------------------------------------------------------
+  # 2. 全平台二进制构建并上传到 Release
+  # ------------------------------------------------------------------
+  build-binaries:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            cross: true
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    env:
+      BIN: lanzou_webdav
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: 安装 cross（Linux musl 交叉编译）
+        if: matrix.cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: 构建 Release 二进制
+        run: |
+          if [ "${{ matrix.cross }}" = "true" ]; then
+            cross build --release --locked --target ${{ matrix.target }}
+          else
+            cargo build --release --locked --target ${{ matrix.target }}
+          fi
+        shell: bash
+
+      - name: 打包（tar.gz）
+        if: runner.os != 'Windows'
+        run: |
+          cd target/${{ matrix.target }}/release
+          ARCHIVE="${BIN}-${TAG#v}-${{ matrix.target }}.tar.gz"
+          tar -czf "$ARCHIVE" "$BIN"
+          sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+          echo "ASSET=$ARCHIVE" >> "$GITHUB_ENV"
+        env:
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+
+      - name: 打包（zip）
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tag = "${{ needs.release-please.outputs.tag_name }}".TrimStart('v')
+          $archive = "${{ env.BIN }}-$tag-${{ matrix.target }}.zip"
+          Push-Location "target/${{ matrix.target }}/release"
+          Compress-Archive -Path "${{ env.BIN }}.exe" -DestinationPath $archive
+          (Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() + "  $archive" | Out-File "$archive.sha256" -Encoding ascii
+          "ASSET=$archive" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: 上传到 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: |
+            target/${{ matrix.target }}/release/${{ env.ASSET }}
+            target/${{ matrix.target }}/release/${{ env.ASSET }}.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ------------------------------------------------------------------
+  # 3. 构建多架构 Docker 镜像并推送到 ghcr.io（仅用 GITHUB_TOKEN）
+  # ------------------------------------------------------------------
+  docker:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 镜像名转小写（ghcr.io 要求）
+        id: image
+        run: echo "name=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 生成镜像标签
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.release-please.outputs.tag_name }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release-please.outputs.tag_name }}
+            type=raw,value=latest
+
+      - name: 构建并推送（linux/amd64 + linux/arm64）
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
